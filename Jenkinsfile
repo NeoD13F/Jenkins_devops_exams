@@ -68,13 +68,21 @@ pipeline {
                         mkdir -p .kube
                         cat $KUBECONFIG > .kube/config
 
-                        cp charts/values.yaml values.yml
-                        sed -i "s+tag:.*+tag: ${DOCKER_TAG}+g" values.yml
-                        sed -i "s+repository:.*+repository: ${DOCKER_ID}/movie-service+g" values.yml
-                        helm upgrade --install movie charts --values=values.yml --namespace prod
+			// Déploiement du movie-service
+			// --set permet d'injecter dynamiquement le nom de l'image, le tag, et le nodePort
+			helm upgrade --install movie charts \\
+			  --set image.repository=${DOCKER_ID}/movie-service \\
+			  --set image.tag=${DOCKER_TAG} \\
+			  --set service.nodePort=30007 \\
+			  --namespace ${ns}
 
-                        sed -i "s+repository:.*+repository: ${DOCKER_ID}/cast-service+g" values.yml
-                        helm upgrade --install cast charts --values=values.yml --namespace prod
+			// Déploiement du cast-service
+			// On utilise un nodePort différent pour éviter le conflit
+			helm upgrade --install cast charts \\
+			  --set image.repository=${DOCKER_ID}/cast-service \\
+			  --set image.tag=${DOCKER_TAG} \\
+			  --set service.nodePort=30008 \\
+			  --namespace ${ns}
                     """
                 }
             }
