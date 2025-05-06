@@ -9,23 +9,22 @@ pipeline {
     stages {
 
         stage('Build & Push Docker Images') {
-            environment {
-                DOCKER_PASS = credentials("DOCKER_HUB_PASS")
-            }
             steps {
-                script {
-                    def services = ['movie-service', 'cast-service']
-                    services.each { svc ->
-                        def image = "$DOCKER_ID/${svc}:${DOCKER_TAG}"
-                        sh """
-                            docker build -t ${image} ./${svc}
-                            echo $DOCKER_PASS | docker login -u $DOCKER_ID --password-stdin
-                            docker push ${image}
-                        """
+                withCredentials([string(credentialsId: 'DOCKER_HUB_PASS', variable: 'PASS')]) {
+ 		    script {
+                    	def services = ['movie-service', 'cast-service']
+                    	services.each { svc ->
+                            def image = "$DOCKER_ID/${svc}:${DOCKER_TAG}"
+                            sh """
+                                docker build -t ${image} ./${svc}
+                                echo "\$PASS" | docker login -u $DOCKER_ID --password-stdin
+                                docker push ${image}
+                            """
+                        }
                     }
                 }
-            }
-        }
+	    }
+	}
 
 	stage('Debug : Afficher la branche') {
 	    steps {
