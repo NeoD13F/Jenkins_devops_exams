@@ -7,6 +7,7 @@ pipeline {
     agent any
 
     stages {
+
         stage('Build & Push Docker Images') {
             environment {
                 DOCKER_PASS = credentials("DOCKER_HUB_PASS")
@@ -33,27 +34,30 @@ pipeline {
             steps {
                 script {
                     def namespaces = ['dev', 'qa', 'staging']
-                    namespaces.each { ns ->
-                        // Si tu veux modifier les valeurs pour chaque service, ajoute ici
-                        sh """
-                            mkdir -p .kube
-                            cat \$KUBECONFIG > .kube/config
-                            # Déploiement du movie-service
-                            # --set permet d'injecter dynamiquement le nom de l'image, le tag, et le nodePort
-                            helm upgrade --install movie charts \\
-                              --set image.repository=${DOCKER_ID}/movie-service \\
-                              --set image.tag=${DOCKER_TAG} \\
-                              --set service.nodePort=30007 \\
-                              --namespace ${ns}
+                    def services = ['movie-service', 'cast-service']
+                    def basePort = 30007
+                    def portCounter = 0
 
-                      	    # Déploiement du cast-service
-                       	    # On utilise un nodePort différent pour éviter le conflit
-                       	    helm upgrade --install cast charts \\
-                              --set image.repository=${DOCKER_ID}/cast-service \\
-                              --set image.tag=${DOCKER_TAG} \\
-                              --set service.nodePort=30008 \\
-                              --namespace ${ns}
-                        """
+                    namespaces.each { ns ->
+                        services.each { svc ->
+                            def imageName = svc
+                            def releaseName = svc.contains('movie') ? 'movie' : 'cast'
+                            def currentPort = basePort + portCounter
+                            portCounter += 1
+
+                            // Création du fichier de configuration kubeconfig
+                            // Déploiement du service avec image, tag et port dynamiquement injectés
+                            sh """
+                                mkdir -p .kube
+                                cat \$KUBECONFIG > .kube/config
+
+                                helm upgrade --install ${releaseName} charts \\
+                                  --set image.repository=${DOCKER_ID}/${imageName} \\
+                                  --set image.tag=${DOCKER_TAG} \\
+                                  --set service.nodePort=${currentPort} \\
+                                  --namespace ${ns}
+                            """
+                        }
                     }
                 }
             }
@@ -68,29 +72,31 @@ pipeline {
             }
             steps {
                 timeout(time: 15, unit: 'MINUTES') {
-                    input message: 'Déployer en production ?'
+                    input message: 'Souhaitez-vous déployer en production ?', ok: 'Oui'
                 }
                 script {
-                    sh """
-                        mkdir -p .kube
-                        cat $KUBECONFIG > .kube/config
+                    def services = ['movie-service', 'cast-service']
+                    def basePort = 30013
+                    def portCounter = 0
 
-			# Déploiement du movie-service
-			# --set permet d'injecter dynamiquement le nom de l'image, le tag, et le nodePort
-			helm upgrade --install movie charts \\
-			  --set image.repository=${DOCKER_ID}/movie-service \\
-			  --set image.tag=${DOCKER_TAG} \\
-			  --set service.nodePort=30007 \\
-			  --namespace ${ns}
+                    services.each { svc ->
+                        def imageName = svc
+                        def releaseName = svc.contains('movie') ? 'movie' : 'cast'
+                        def currentPort = basePort + portCounter
+                        portCounter += 1
 
-			# Déploiement du cast-service
-			# On utilise un nodePort différent pour éviter le conflit
-			helm upgrade --install cast charts \\
-			  --set image.repository=${DOCKER_ID}/cast-service \\
-			  --set image.tag=${DOCKER_TAG} \\
-			  --set service.nodePort=30008 \\
-			  --namespace ${ns}
-                    """
+                        // Déploiement en namespace prod avec ports séparés pour éviter les conflits
+                        sh """
+                            mkdir -p .kube
+                            cat \$KUBECONFIG > .kube/config
+
+                            helm upgrade --install ${releaseName} charts \\
+                              --set image.repository=${DOCKER_ID}/${imageName} \\
+                              --set image.tag=${DOCKER_TAG} \\
+                              --set service.nodePort=${currentPort} \\
+                              --namespace prod
+                        """
+                    }
                 }
             }
         }
