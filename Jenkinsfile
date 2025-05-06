@@ -72,7 +72,7 @@ pipeline {
 
         stage('Déploiement en prod') {
             when {
-                branch 'master'
+                expression { env.BRANCH_NAME == 'master' || env.BRANCH_NAME == 'origin/master' }
             }
             environment {
                 KUBECONFIG = credentials("config")
