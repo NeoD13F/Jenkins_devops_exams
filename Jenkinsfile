@@ -38,16 +38,16 @@ pipeline {
                         sh """
                             mkdir -p .kube
                             cat \$KUBECONFIG > .kube/config
-                            // Déploiement du movie-service
-                            // --set permet d'injecter dynamiquement le nom de l'image, le tag, et le nodePort
+                            # Déploiement du movie-service
+                            # --set permet d'injecter dynamiquement le nom de l'image, le tag, et le nodePort
                             helm upgrade --install movie charts \\
                               --set image.repository=${DOCKER_ID}/movie-service \\
                               --set image.tag=${DOCKER_TAG} \\
                               --set service.nodePort=30007 \\
                               --namespace ${ns}
 
-                      	    // Déploiement du cast-service
-                       	    // On utilise un nodePort différent pour éviter le conflit
+                      	    # Déploiement du cast-service
+                       	    # On utilise un nodePort différent pour éviter le conflit
                        	    helm upgrade --install cast charts \\
                               --set image.repository=${DOCKER_ID}/cast-service \\
                               --set image.tag=${DOCKER_TAG} \\
@@ -75,16 +75,16 @@ pipeline {
                         mkdir -p .kube
                         cat $KUBECONFIG > .kube/config
 
-			// Déploiement du movie-service
-			// --set permet d'injecter dynamiquement le nom de l'image, le tag, et le nodePort
+			# Déploiement du movie-service
+			# --set permet d'injecter dynamiquement le nom de l'image, le tag, et le nodePort
 			helm upgrade --install movie charts \\
 			  --set image.repository=${DOCKER_ID}/movie-service \\
 			  --set image.tag=${DOCKER_TAG} \\
 			  --set service.nodePort=30007 \\
 			  --namespace ${ns}
 
-			// Déploiement du cast-service
-			// On utilise un nodePort différent pour éviter le conflit
+			# Déploiement du cast-service
+			# On utilise un nodePort différent pour éviter le conflit
 			helm upgrade --install cast charts \\
 			  --set image.repository=${DOCKER_ID}/cast-service \\
 			  --set image.tag=${DOCKER_TAG} \\
