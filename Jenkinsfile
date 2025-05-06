@@ -29,8 +29,9 @@ pipeline {
 
 	stage('Debug : Afficher la branche') {
 	    steps {
-	        echo "Valeur de env.BRANCH_NAME = ${env.BRANCH_NAME}"
-	        sh 'echo BRANCHE DETECTEE : $GIT_BRANCH'
+	        echo "env.BRANCH_NAME = ${env.BRANCH_NAME}"
+		echo "env.GIT_BRANCH = ${env.GIT_BRANCH}"
+	        sh 'echo BRANCHE SHELL = $GIT_BRANCH'
 	    }
 	}
 
@@ -72,7 +73,7 @@ pipeline {
 
         stage('Déploiement en prod') {
             when {
-                expression { env.BRANCH_NAME == 'master' || env.BRANCH_NAME == 'origin/master' }
+                expression { return env.GIT_BRANCH == 'origin/master' }
             }
             environment {
                 KUBECONFIG = credentials("config")
